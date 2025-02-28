@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        .container { max-width: 400px; margin: auto; padding: 20px; }
+        input { width: 100%; padding: 10px; margin: 10px 0; }
+        button { width: 100%; padding: 10px; background: blue; color: white; border: none; cursor: pointer; margin-top: 10px; }
+        table { width: 100%; margin-top: 20px; border-collapse: collapse; }
+        th, td { border: 1px solid black; padding: 10px; text-align: left; }
+        .unpaid-table { background-color: lightcoral; margin-top: 20px; }
+        #unpaid-container { margin-bottom: 30px; padding-bottom: 30px; }
+        .button-container { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container" id="login-container">
+        <h2>Login</h2>
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <p id="error" style="color: red;"></p>
+    </div>
+
+    <div class="container" id="bills-container" style="display: none;">
+        <h2>Bill for <span id="user-name"></span></h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody id="bills-table"></tbody>
+        </table>
+        <div id="unpaid-container">
+            <h3>Previous Unpaid Amount</h3>
+            <table class="unpaid-table">
+                <tbody id="unpaid-table"></tbody>
+            </table>
+        </div>
+        
+            <button onclick="uploadFile()">Upload File</button>
+            
+            <p style="font-size: 14px; color: gray;">Please upload payment receipts by clicking here.</p>
+            <button onclick="logout()" style="background: red;">Logout</button>
+        </div>
+    </div>
+
+    <script>
+        const sheetId = "1L6zmkeIoTS24l1BlpspzV2WXfid3GuVPo-ibhcG7CUQ";
+        const apiKey = "AIzaSyCn_UzTXWKtAbugo0_baEixCo__jgK8bGo";
+        const usersSheet = "Users";
+        const billsSheet = "Bill_Info";
+
+        const userDriveFolders = {
+            "b1_1st": "https://drive.google.com/drive/folders/1cVDqZ6H9aQEn5D7tHc0gOc14ITrnfJ-T",
+            "b1_2nd": "https://drive.google.com/drive/folders/1BH-C_VDQwPwq9QUDMYTtxsSflMuOciFm",
+        };
+
+        async function login() {
+            const username = document.getElementById("username").value.trim();
+            const password = document.getElementById("password").value.trim();
+            const errorElement = document.getElementById("error");
+
+            if (!username || !password) {
+                errorElement.textContent = "Please enter both username and password.";
+                return;
+            }
+
+            try {
+                const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${usersSheet}?key=${apiKey}`);
+                const data = await response.json();
+
+                if (!data.values) throw new Error("Invalid API response");
+
+                const users = data.values;
+                const userRow = users.find(row => row[0] === username && row[1] === password);
+
+                if (userRow) {
+                    document.getElementById("user-name").textContent = username;
+                    document.getElementById("login-container").style.display = "none";
+                    document.getElementById("bills-container").style.display = "block";
+                    fetchBills(username);
+                } else {
+                    errorElement.textContent = "Invalid username or password";
+                }
+            } catch (err) {
+                errorElement.textContent = "Failed to authenticate. Please try again.";
+                console.error("Error during login:", err);
+            }
+        }
+
+        async function fetchBills(user) {
+            try {
+                const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${billsSheet}?key=${apiKey}`);
+                const data = await response.json();
+
+                if (!data.values) throw new Error("Invalid API response");
+
+                const rows = data.values;
+                const userBills = rows.find(row => row[0] === user) || [];
+                console.log("Fetched userBills:", userBills, "Length:", userBills.length);
+                
+                const categories = ["Electricity", "Water", "Internet", "Rent"];
+                const tableBody = document.getElementById("bills-table");
+                const unpaidTableBody = document.getElementById("unpaid-table");
+                tableBody.innerHTML = "";
+                unpaidTableBody.innerHTML = "";
+
+                categories.forEach((category, index) => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `<td>${category}</td><td>${userBills[index + 1] ?? "N/A"}</td>`;
+                    tableBody.appendChild(row);
+                });
+
+                const unpaidAmount = userBills.length > 5 && userBills[5] !== undefined ? userBills[5].trim() : "N/A";
+                console.log("Unpaid Amount:", unpaidAmount);
+                const unpaidRow = document.createElement("tr");
+                unpaidRow.innerHTML = `<td>Unpaid Amount</td><td>${unpaidAmount}</td>`;
+                unpaidTableBody.appendChild(unpaidRow);
+            } catch (err) {
+                console.error("Error fetching data:", err);
+                document.getElementById("bills-container").innerHTML = `<p style="color: red;">Failed to load bill data. Please try again.</p>`;
+            }
+        }
+
+        function logout() {
+            document.getElementById("bills-container").style.display = "none";
+            document.getElementById("login-container").style.display = "block";
+            document.getElementById("username").value = "";
+            document.getElementById("password").value = "";
+        }
+    </script>
+</body>
+</html>
