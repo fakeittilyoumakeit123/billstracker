@@ -103,33 +103,31 @@
                 const rows = data.values;
                 const userBills = rows.find(row => row[0] === user) || [];
                 console.log("Fetched userBills:", userBills, "Length:", userBills.length);
-
+                
                 const categories = ["Electricity", "Water", "Internet", "Rent"];
                 const tableBody = document.getElementById("bills-table");
                 const unpaidTableBody = document.getElementById("unpaid-table");
                 tableBody.innerHTML = "";
                 unpaidTableBody.innerHTML = "";
 
-                let totalAmount = 0;  // Variable to hold the total sum of the bills
-
                 categories.forEach((category, index) => {
-                    const amount = parseFloat(userBills[index + 1]) || 0; // Ensure the amount is a number
                     const row = document.createElement("tr");
                     row.innerHTML = `<td>${category}</td><td>${userBills[index + 1] ?? "N/A"}</td>`;
                     tableBody.appendChild(row);
-                    totalAmount += amount; // Add the amount to the total
                 });
-
-                // Add the total row after the categories
-                const totalRow = document.createElement("tr");
-                totalRow.innerHTML = `<td><strong>Total</strong></td><td><strong>${totalAmount.toFixed(2)}</strong></td>`;
-                tableBody.appendChild(totalRow);
 
                 const unpaidAmount = userBills.length > 5 && userBills[5] !== undefined ? userBills[5].trim() : "N/A";
                 console.log("Unpaid Amount:", unpaidAmount);
                 const unpaidRow = document.createElement("tr");
                 unpaidRow.innerHTML = `<td>Unpaid Amount</td><td>${unpaidAmount}</td>`;
                 unpaidTableBody.appendChild(unpaidRow);
+
+                // Total row for all bills
+                const totalAmount = (parseFloat(userBills[1] || 0) + parseFloat(userBills[2] || 0) + parseFloat(userBills[3] || 0) + parseFloat(userBills[4] || 0)).toFixed(2);
+                const totalRow = document.createElement("tr");
+                totalRow.innerHTML = `<td><strong>Total</strong></td><td>${totalAmount}</td>`;
+                tableBody.appendChild(totalRow);
+
             } catch (err) {
                 console.error("Error fetching data:", err);
                 document.getElementById("bills-container").innerHTML = `<p style="color: red;">Failed to load bill data. Please try again.</p>`;
