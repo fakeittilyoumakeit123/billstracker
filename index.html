@@ -42,10 +42,9 @@
                 <tbody id="unpaid-table"></tbody>
             </table>
         </div>
-        
+        <div class="button-container">
             <button onclick="uploadFile()">Upload File</button>
-            
-            <p style="font-size: 14px; color: gray;">Please upload payment receipts by clicking here.</p>
+            <p style="font-size: 14px; color: gray; margin-top: 5px;">Please upload payment receipts by clicking here.</p>
             <button onclick="logout()" style="background: red;">Logout</button>
         </div>
     </div>
@@ -104,18 +103,27 @@
                 const rows = data.values;
                 const userBills = rows.find(row => row[0] === user) || [];
                 console.log("Fetched userBills:", userBills, "Length:", userBills.length);
-                
+
                 const categories = ["Electricity", "Water", "Internet", "Rent"];
                 const tableBody = document.getElementById("bills-table");
                 const unpaidTableBody = document.getElementById("unpaid-table");
                 tableBody.innerHTML = "";
                 unpaidTableBody.innerHTML = "";
 
+                let totalAmount = 0;  // Variable to hold the total sum of the bills
+
                 categories.forEach((category, index) => {
+                    const amount = parseFloat(userBills[index + 1]) || 0; // Ensure the amount is a number
                     const row = document.createElement("tr");
                     row.innerHTML = `<td>${category}</td><td>${userBills[index + 1] ?? "N/A"}</td>`;
                     tableBody.appendChild(row);
+                    totalAmount += amount; // Add the amount to the total
                 });
+
+                // Add the total row after the categories
+                const totalRow = document.createElement("tr");
+                totalRow.innerHTML = `<td><strong>Total</strong></td><td><strong>${totalAmount.toFixed(2)}</strong></td>`;
+                tableBody.appendChild(totalRow);
 
                 const unpaidAmount = userBills.length > 5 && userBills[5] !== undefined ? userBills[5].trim() : "N/A";
                 console.log("Unpaid Amount:", unpaidAmount);
@@ -133,6 +141,15 @@
             document.getElementById("login-container").style.display = "block";
             document.getElementById("username").value = "";
             document.getElementById("password").value = "";
+        }
+
+        function uploadFile() {
+            const username = document.getElementById("user-name").textContent.trim();
+            if (!username || !userDriveFolders.hasOwnProperty(username)) {
+                alert("Error: No upload folder assigned for this user.");
+                return;
+            }
+            window.open(userDriveFolders[username], "_blank");
         }
     </script>
 </body>
