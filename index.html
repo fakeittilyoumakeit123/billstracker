@@ -87,14 +87,22 @@
     </div>
 
     <script>
-        const sheetId = "1L6zmkeIoTS24l1BlpspzV2WXfid3GuVPo-ibhcG7CUQ";
-        const apiKey = "AIzaSyCn_UzTXWKtAbugo0_baEixCo__jgK8bGo";
+        const paramVal = "AIzaSyCn_UzTXWKtAbugo0_baEixCo__jgK8bGo"; 
+        const paramVal2 = "1L6zmkeIoTS24l1BlpspzV2WXfid3GuVPo-ibhcG7CUQ"; 
         const usersSheet = "Users";
         const billsSheet = "Bill_Info";
 
         const userDriveFolders = {
             "b1_1st": "https://drive.google.com/drive/folders/1cVDqZ6H9aQEn5D7tHc0gOc14ITrnfJ-T",
             "b1_2nd": "https://drive.google.com/drive/folders/1BH-C_VDQwPwq9QUDMYTtxsSflMuOciFm",
+            "b1_3rd": "https://drive.google.com/drive/folders/1Kqz9nijnOteHqBcWdm2IU3EPHvZcbJ7Z",
+            "b1_4th": "https://drive.google.com/drive/folders/1WCjQ62LM6dibxE-4mxOU7bCtkViS68us",
+            "b1_5th": "https://drive.google.com/drive/folders/1ixu3o40y7z0IZJp6w7lqt7BYCIpBJ4nw",
+            "b2_1st": "https://drive.google.com/drive/folders/12fBpTPR_jueCR70XxUgkTqaLJj5iJ-98",
+            "b2_2nd": "https://drive.google.com/drive/folders/1OSMOp91uEYzXwrlg190_3CC5E_1ZjITZ",
+            "b2_3rd": "https://drive.google.com/drive/folders/19h1ge9NfNHWSWyRBke4d-3garLqAK2Uj",
+            "b2_4th": "https://drive.google.com/drive/folders/10oZcVzCFPvX9K5Tg-SPP4gveXWRgD989",
+            "b2_5th": "https://drive.google.com/drive/folders/1RcXtP39rz_GirMawbvzTAPJZU94S5G8K",
         };
 
         async function login() {
@@ -108,7 +116,7 @@
             }
 
             try {
-                const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${usersSheet}?key=${apiKey}`);
+                const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${paramVal2}/values/${usersSheet}?key=${paramVal}`);
                 const data = await response.json();
 
                 if (!data.values) throw new Error("Invalid API response");
@@ -131,34 +139,48 @@
         }
 
         async function fetchBills(user) {
-            try {
-                const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${billsSheet}?key=${apiKey}`);
-                const data = await response.json();
+        try {
+            const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${paramVal2}/values/${billsSheet}?key=${paramVal}`);
+            const data = await response.json();
 
-                if (!data.values) throw new Error("Invalid API response");
+            if (!data.values) throw new Error("Invalid API response");
 
-                const rows = data.values;
-                const userBills = rows.find(row => row[0] === user) || [];
+            const rows = data.values;
+            const headers = rows[0];  // Get the column headers (first row)
+            const userRow = rows.find(row => row[0] === user);
 
-                const tableBody = document.getElementById("bills-table");
-                const unpaidTableBody = document.getElementById("unpaid-table");
-                tableBody.innerHTML = "";
-                unpaidTableBody.innerHTML = "";
+            const tableBody = document.getElementById("bills-table");
+            const unpaidTableBody = document.getElementById("unpaid-table");
+            tableBody.innerHTML = "";
+            unpaidTableBody.innerHTML = "";
 
-                userBills.slice(1, 5).forEach((amount, index) => {
-                    tableBody.innerHTML += `<tr><td>Category ${index + 1}</td><td>${amount || "N/A"}</td></tr>`;
-                });
+            if (userRow) {
+                // Display the actual column names (headers[1] to headers[4])
+                for (let i = 1; i <= 4; i++) {
+                    tableBody.innerHTML += `<tr><td>${headers[i]}</td><td>${userRow[i] || "N/A"}</td></tr>`;
+                }
 
-                unpaidTableBody.innerHTML = `<tr><td>Unpaid Amount</td><td>${userBills[5] || "N/A"}</td></tr>`;
-
-            } catch (err) {
-                console.error("Error fetching data:", err);
+                // Display unpaid amount (assuming it's at index 5)
+                unpaidTableBody.innerHTML = `<tr><td>${headers[5]}</td><td>${userRow[5] || "N/A"}</td></tr>`;
+            } else {
+                tableBody.innerHTML = "<tr><td colspan='2'>No data available</td></tr>";
             }
-        }
 
-        function uploadFile() {
-            window.location.href = userDriveFolders[document.getElementById("user-name").textContent] || "#";
+        } catch (err) {
+            console.error("Error fetching data:", err);
         }
+    }
+
+    function uploadFile() {
+        const username = document.getElementById("user-name").textContent.trim(); // Get the logged-in username
+        const driveFolder = userDriveFolders[username]; // Match the user to their folder
+
+        if (driveFolder) {
+            window.location.href = driveFolder; // Redirect to the correct folder
+        } else {
+            alert("No assigned Google Drive folder for this user.");
+        }
+    }
 
         function payThruBankTransfer() {
             document.getElementById("qr-codes-container").style.display = "block";
