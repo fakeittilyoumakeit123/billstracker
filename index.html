@@ -12,8 +12,12 @@
         table { width: 100%; margin-top: 20px; border-collapse: collapse; }
         th, td { border: 1px solid black; padding: 10px; text-align: left; }
         .unpaid-table { background-color: lightcoral; margin-top: 20px; }
-        #unpaid-container { margin-bottom: 30px; padding-bottom: 30px; }
         .button-container { margin-top: 20px; }
+        .qr-codes-container { display: none; margin-top: 20px; }
+        .qr-row { display: flex; justify-content: center; margin-bottom: 20px; }
+        .qr-code { margin: 0 15px; text-align: center; }
+        .qr-code img { width: 150px; height: 150px; }
+        .qr-code label { display: block; margin-top: 5px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -36,16 +40,52 @@
             </thead>
             <tbody id="bills-table"></tbody>
         </table>
+
         <div id="unpaid-container">
             <h3>Previous Unpaid Amount</h3>
             <table class="unpaid-table">
                 <tbody id="unpaid-table"></tbody>
             </table>
         </div>
+
         <div class="button-container">
             <button onclick="uploadFile()">Upload File</button>
             <p style="font-size: 14px; color: gray; margin-top: 5px;">Please upload payment receipts by clicking here.</p>
+            <button onclick="payThruBankTransfer()">Pay Thru Bank Transfer</button>
+            <p style="font-size: 14px; color: gray; margin-top: 5px;">Click to view options for bank transfer.</p>
             <button onclick="logout()" style="background: red;">Logout</button>
+        </div>
+    </div>
+
+    <div class="container qr-codes-container" id="qr-codes-container">
+        <h2>Select Your Bank for Payment</h2>
+        <div class="qr-row">
+            <div class="qr-code">
+                <img src="./MEL BDO QR.jpg" alt="BDO QR Code">
+                <label>BDO</label>
+            </div>
+            <div class="qr-code">
+                <img src="./MEL UB QR.jpg" alt="UnionBank QR Code">
+                <label>UnionBank</label>
+            </div>
+            <div class="qr-code">
+                <img src="./MEL METRO QR.jpg" alt="MetroBank QR Code">
+                <label>MetroBank</label>
+            </div>
+        </div>
+        <div class="qr-row">
+            <div class="qr-code">
+                <img src="./MEL BPI QR.jpg" alt="BPI QR Code">
+                <label>BPI</label>
+            </div>
+            <div class="qr-code">
+                <img src="./MEL MAYA QR.jpg" alt="MAYA QR Code">
+                <label>MAYA</label>
+            </div>
+            <div class="qr-code">
+                <img src="./MEL PSBANK QR.jpg" alt="PSBank QR Code">
+                <label>PSBank</label>
+            </div>
         </div>
     </div>
 
@@ -59,6 +99,8 @@
             "b1_1st": "https://drive.google.com/drive/folders/1cVDqZ6H9aQEn5D7tHc0gOc14ITrnfJ-T",
             "b1_2nd": "https://drive.google.com/drive/folders/1BH-C_VDQwPwq9QUDMYTtxsSflMuOciFm",
         };
+
+        let loggedInUser = "";
 
         async function login() {
             const username = document.getElementById("username").value.trim();
@@ -80,6 +122,7 @@
                 const userRow = users.find(row => row[0] === username && row[1] === password);
 
                 if (userRow) {
+                    loggedInUser = username;
                     document.getElementById("user-name").textContent = username;
                     document.getElementById("login-container").style.display = "none";
                     document.getElementById("bills-container").style.display = "block";
@@ -100,54 +143,42 @@
 
                 if (!data.values) throw new Error("Invalid API response");
 
-                const rows = data.values;
-                const userBills = rows.find(row => row[0] === user) || [];
-                console.log("Fetched userBills:", userBills, "Length:", userBills.length);
-                
-                const categories = ["Electricity", "Water", "Internet", "Rent"];
                 const tableBody = document.getElementById("bills-table");
                 const unpaidTableBody = document.getElementById("unpaid-table");
+
                 tableBody.innerHTML = "";
                 unpaidTableBody.innerHTML = "";
 
-                categories.forEach((category, index) => {
-                    const row = document.createElement("tr");
-                    row.innerHTML = `<td>${category}</td><td>${userBills[index + 1] ?? "N/A"}</td>`;
-                    tableBody.appendChild(row);
+                data.values.forEach(row => {
+                    if (row[0] === user) {
+                        for (let i = 1; i < row.length - 1; i++) {
+                            const tr = document.createElement("tr");
+                            tr.innerHTML = `<td>Bill ${i}</td><td>${row[i]}</td>`;
+                            tableBody.appendChild(tr);
+                        }
+
+                        const unpaidRow = document.createElement("tr");
+                        unpaidRow.innerHTML = `<td>Unpaid Amount</td><td>${row[row.length - 1]}</td>`;
+                        unpaidTableBody.appendChild(unpaidRow);
+                    }
                 });
-
-                const unpaidAmount = userBills.length > 5 && userBills[5] !== undefined ? userBills[5].trim() : "N/A";
-                console.log("Unpaid Amount:", unpaidAmount);
-                const unpaidRow = document.createElement("tr");
-                unpaidRow.innerHTML = `<td>Unpaid Amount</td><td>${unpaidAmount}</td>`;
-                unpaidTableBody.appendChild(unpaidRow);
-
-                // Total row for all bills
-                const totalAmount = (parseFloat(userBills[1] || 0) + parseFloat(userBills[2] || 0) + parseFloat(userBills[3] || 0) + parseFloat(userBills[4] || 0)).toFixed(2);
-                const totalRow = document.createElement("tr");
-                totalRow.innerHTML = `<td><strong>Total</strong></td><td>${totalAmount}</td>`;
-                tableBody.appendChild(totalRow);
-
             } catch (err) {
-                console.error("Error fetching data:", err);
-                document.getElementById("bills-container").innerHTML = `<p style="color: red;">Failed to load bill data. Please try again.</p>`;
+                console.error("Error fetching bills:", err);
             }
-        }
-
-        function logout() {
-            document.getElementById("bills-container").style.display = "none";
-            document.getElementById("login-container").style.display = "block";
-            document.getElementById("username").value = "";
-            document.getElementById("password").value = "";
         }
 
         function uploadFile() {
-            const username = document.getElementById("user-name").textContent.trim();
-            if (!username || !userDriveFolders.hasOwnProperty(username)) {
-                alert("Error: No upload folder assigned for this user.");
-                return;
-            }
-            window.open(userDriveFolders[username], "_blank");
+            window.location.href = userDriveFolders[loggedInUser] || "#";
+        }
+
+        function payThruBankTransfer() {
+            document.getElementById("qr-codes-container").style.display = "block";
+        }
+
+        function logout() {
+            document.getElementById("login-container").style.display = "block";
+            document.getElementById("bills-container").style.display = "none";
+            document.getElementById("qr-codes-container").style.display = "none";
         }
     </script>
 </body>
