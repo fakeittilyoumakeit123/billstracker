@@ -35,6 +35,7 @@
 
     <div class="container" id="bills-container" style="display: none;">
         <h2>Bill for <span id="user-name"></span> - <span id="payment-period"></span></h2>
+    <p id="payment-message" style="font-size: 16px; color: gray;"></p>
         <table>
             <thead>
                 <tr>
@@ -51,8 +52,8 @@
             </table>
         </div>
         <div class="button-container">
-            <button onclick="uploadFile()">Upload File</button>
-            <p style="font-size: 14px; color: gray;">Please upload payment receipts by clicking here.</p>
+            <button id="upload-btn" onclick="uploadFile()">Upload Payment Receipts</button>
+            <p style="font-size: 14px; color: gray;">Please upload your payment receipt for review. Once verified, your payment will be marked as complete. Thank you!</p>
             <button onclick="payThruBankTransfer()">Pay Thru Bank Transfer</button>
             <p style="font-size: 14px; color: gray;">Click to view options for bank transfer.</p>
             <button onclick="logout()" id="logout-btn">Logout</button>
@@ -90,6 +91,7 @@
     </div>
 
     <script>
+        
         const paramVal = "AIzaSyCn_UzTXWKtAbugo0_baEixCo__jgK8bGo"; 
         const paramVal2 = "1L6zmkeIoTS24l1BlpspzV2WXfid3GuVPo-ibhcG7CUQ"; 
         const usersSheet = "Users";
@@ -141,68 +143,151 @@
             }
         }
 
-        async function fetchBills(user) {
-            try {
-                const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${paramVal2}/values/${billsSheet}?key=${paramVal}`);
-                const data = await response.json();
+async function fetchBills(user) {
+    try {
+        const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${paramVal2}/values/${billsSheet}?key=${paramVal}`);
+        const data = await response.json();
 
-                if (!data.values) throw new Error("Invalid API response");
+        if (!data.values) throw new Error("Invalid API response");
 
-                const rows = data.values;
-                const headers = rows[0];  // Get the column headers (first row)
-                const userRow = rows.find(row => row[0] === user);
+        const rows = data.values;
+        const headers = rows[0];  
+        const userRow = rows.find(row => row[0] === user);
 
-                const tableBody = document.getElementById("bills-table");
-                const unpaidTableBody = document.getElementById("unpaid-table");
-                tableBody.innerHTML = "";
-                unpaidTableBody.innerHTML = "";
+        const tableContainer = document.getElementById("bills-container");
+        const tableBody = document.getElementById("bills-table");
+        const unpaidTableBody = document.getElementById("unpaid-table");
+        const paymentMessage = document.getElementById("payment-message");
+        const uploadButton = document.querySelector("button[onclick='uploadFile()']");
 
-                if (userRow) {
-                    // Display payment period (Column G) under the header for user
-                    const paymentPeriod = userRow[6] || "N/A";
-                    document.getElementById("payment-period").textContent = paymentPeriod;
+        tableBody.innerHTML = "";
+        unpaidTableBody.innerHTML = "";
 
-                    // Display the actual bill categories and amounts
-                    for (let i = 1; i <= 4; i++) {  // Show Categories and Amounts
-                        tableBody.innerHTML += `<tr><td>${headers[i]}</td><td>${userRow[i] || "N/A"}</td></tr>`;
-                    }
+        if (userRow) {
+            const paymentPeriod = userRow[6] || "N/A";
+            document.getElementById("payment-period").textContent = paymentPeriod;
 
-                    // Display the total from Column I
-                    const totalAmount = userRow[8] || "N/A";  // Assuming total is in Column I
-                    tableBody.innerHTML += `<tr><td><strong>Total</strong></td><td><strong>${totalAmount}</strong></td></tr>`;
+            const paymentStatus = userRow[7] || "Not Paid";
+            console.log(`User Payment Status: ${paymentStatus}`);  // Debugging log
 
-                    // Display Previously Unpaid Amount if exists
-                    const unpaidAmount = userRow[9] || "N/A"; // Assuming Column 9 contains the previous unpaid amount
-                    unpaidTableBody.innerHTML = `<tr><td>Previously Unpaid Amount</td><td>${unpaidAmount}</td></tr>`;
+            // **Check if status is "Pending Review" first**
+            if (paymentStatus === "Pending Review") {
+                console.log("Setting message for Pending Review...");
+                paymentMessage.innerHTML = `<p>Your payment has been received and is currently under review. Once verified, it will be marked as complete.</p>`;
+            }
 
-                    // Display payment status and handle background colors
-                    const paymentStatus = userRow[7] ? userRow[7] : "Not Paid"; // Display "Not Paid" if payment status is null
-                    const statusClass = paymentStatus === "Paid" ? "paid" : "unpaid";
-
-                    tableBody.innerHTML += `
-                        <tr class="payment-status ${statusClass}">
-                            <td colspan="2">${paymentStatus}</td>
-                        </tr>
-                    `;
-                } else {
-                    tableBody.innerHTML = "<tr><td colspan='2'>No data available</td></tr>";
+            if (paymentStatus === "Paid") {
+                console.log("Payment is Paid, hiding tables...");
+                tableContainer.style.display = "block";
+                tableBody.parentElement.style.display = "none";
+                unpaidTableBody.parentElement.style.display = "none";
+                paymentMessage.innerHTML = `<p>No unsettled bills for the month.</p>`;
+                
+                if (uploadButton) {
+                    uploadButton.disabled = true;
+                    uploadButton.style.opacity = "0.5";
                 }
-
-            } catch (err) {
-                console.error("Error fetching data:", err);
+                return;
             }
-        }
 
-        function uploadFile() {
-            const username = document.getElementById("user-name").textContent.trim(); // Get the logged-in username
-            const driveFolder = userDriveFolders[username]; // Match the user to their folder
+            // **Ensure message for Pending Review does NOT get overwritten**
+            if (paymentStatus !== "Pending Review") {
+                console.log("Setting message for unpaid status...");
+                paymentMessage.innerHTML = `<p>Kindly settle your outstanding bill at your earliest convenience. Please upload your payment receipt for verification. Thank you.</p>`;
+            }
 
-            if (driveFolder) {
-                window.location.href = driveFolder; // Redirect to the correct folder
+            // **Ensure tables remain visible for "Pending Review"**
+            console.log("Displaying table...");
+            tableBody.parentElement.style.display = "table";
+            unpaidTableBody.parentElement.style.display = "table";
+            tableContainer.style.display = "block";
+
+            for (let i = 1; i <= 4; i++) {  
+                tableBody.innerHTML += `<tr><td>${headers[i]}</td><td>${userRow[i] || "N/A"}</td></tr>`;
+            }
+
+            const totalAmount = userRow[8] || "N/A";  
+            tableBody.innerHTML += `<tr><td><strong>Total</strong></td><td><strong>${totalAmount}</strong></td></tr>`;
+
+            const unpaidAmount = userRow[9] || "N/A";  
+            unpaidTableBody.innerHTML = `<tr><td>Previously Unpaid Amount</td><td>${unpaidAmount}</td></tr>`;
+
+            tableBody.innerHTML += `
+                <tr class="payment-status unpaid">
+                    <td colspan="2">${paymentStatus}</td>
+                </tr>
+            `;
+
+            // **Disable Upload Button if Status is "Paid" or "Pending Review"**
+            if (uploadButton) {
+                if (paymentStatus === "Paid" || paymentStatus === "Pending Review") {
+                    console.log("Disabling upload button...");
+                    uploadButton.disabled = true;
+                    uploadButton.style.opacity = "0.5"; 
+                } else {
+                    console.log("Enabling upload button...");
+                    uploadButton.disabled = false;
+                    uploadButton.style.opacity = "1"; 
+                }
             } else {
-                alert("No assigned Google Drive folder for this user.");
+                console.error("Upload button NOT found!");
             }
+
+        } else {
+            console.log("No user data found, showing default message...");
+            tableContainer.style.display = "block";
+            tableBody.parentElement.style.display = "none"; 
+            unpaidTableBody.parentElement.style.display = "none";
+            paymentMessage.innerHTML = `<p>No billing information available.</p>`; 
         }
+
+    } catch (err) {
+        console.error("Error fetching data:", err);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+function uploadFile() {
+    const username = document.getElementById("user-name").textContent.trim();
+    const driveFolder = userDriveFolders[username];
+
+    if (!driveFolder) {
+        alert("No assigned Google Drive folder for this user.");
+        return;
+    }
+
+    const scriptURL = "https://script.google.com/macros/s/AKfycbwDJE8wMUtzdunWTA8UiaPK7gBllAJh8aimV3svvYFN_lebKLwx3Pd0lMFnXKRIK4Q9Og/exec";
+    
+    console.log("Fetching URL:", `${scriptURL}?action=markAsPendingReview&item=${encodeURIComponent(username)}`);
+
+    fetch(`${scriptURL}?action=markAsPendingReview&item=${encodeURIComponent(username)}`)
+        .then(response => response.json())
+        .then(data => {
+            console.log("Status Updated:", data);
+            if (data.success) {  // Check if success property exists
+                alert("Payment status updated to 'For Review'");
+
+                // **Move Navigation Here**
+                window.location.href = driveFolder;
+            } else {
+                alert("Failed to update payment status. Check script logs.");
+            }
+        })
+        .catch(error => console.error("Error Updating Status:", error));
+}
+
+
+        
 
         function payThruBankTransfer() {
             document.getElementById("qr-codes-container").style.display = "block";
