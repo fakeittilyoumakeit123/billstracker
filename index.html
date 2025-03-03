@@ -45,12 +45,13 @@
             </thead>
             <tbody id="bills-table"></tbody>
         </table>
-        <div>
-            <h3>Previously Unpaid Amount</h3>
-            <table class="unpaid-table">
-                <tbody id="unpaid-table"></tbody>
-            </table>
-        </div>
+<div id="unpaid-section">
+    <h3>Previously Unpaid Amount</h3>
+    <table class="unpaid-table">
+        <tbody id="unpaid-table"></tbody>
+    </table>
+</div>
+
         <div class="button-container">
             <button id="upload-btn" onclick="uploadFile()">Upload Payment Receipts</button>
             <p style="font-size: 14px; color: gray;">Please upload your payment receipt for review. Once verified, your payment will be marked as complete. Thank you!</p>
@@ -176,19 +177,50 @@ async function fetchBills(user) {
                 paymentMessage.innerHTML = `<p>Your payment has been received and is currently under review. Once verified, it will be marked as complete.</p>`;
             }
 
-            if (paymentStatus === "Paid") {
-                console.log("Payment is Paid, hiding tables...");
-                tableContainer.style.display = "block";
-                tableBody.parentElement.style.display = "none";
-                unpaidTableBody.parentElement.style.display = "none";
-                paymentMessage.innerHTML = `<p>No unsettled bills for the month.</p>`;
-                
-                if (uploadButton) {
-                    uploadButton.disabled = true;
-                    uploadButton.style.opacity = "0.5";
-                }
-                return;
-            }
+if (paymentStatus === "Paid") {
+    console.log("Payment is Paid, hiding main bills table...");
+
+    tableBody.closest("table").style.display = "none"; // Hide main bills table
+
+    // Get unpaid amount from column F (index 5)
+    const unpaidAmount = userRow[5]?.trim();
+    console.log("Unpaid Amount:", unpaidAmount); // Debugging
+
+    if (unpaidAmount && unpaidAmount !== "0") {  // Ensure it’s a valid amount
+        console.log("There is an unpaid amount, showing unpaid section...");
+        
+        // Show unpaid table
+        unpaidTableBody.closest("div").style.display = "block"; 
+        unpaidTableBody.closest("table").style.display = "table"; 
+        
+        // Show the heading
+        const unpaidHeading = unpaidTableBody.closest("div").querySelector("h3"); 
+        if (unpaidHeading) unpaidHeading.style.display = "block";
+
+        // Populate the table with data
+        unpaidTableBody.innerHTML = `<tr><td>Previously Unpaid Amount</td><td>${unpaidAmount}</td></tr>`;
+    } else {
+        console.log("No unpaid amount, hiding unpaid section...");
+        
+        // Hide unpaid table
+        unpaidTableBody.closest("div").style.display = "none";
+        unpaidTableBody.closest("table").style.display = "none"; 
+
+        // Hide the heading
+        const unpaidHeading = unpaidTableBody.closest("div").querySelector("h3"); 
+        if (unpaidHeading) unpaidHeading.style.display = "none";
+    }
+
+    paymentMessage.innerHTML = `<p>No unsettled bills for the month.</p>`;
+
+    if (uploadButton) {
+        uploadButton.disabled = true;
+        uploadButton.style.opacity = "0.5";
+    }
+    return;
+}
+
+
 
             // **Ensure message for Pending Review does NOT get overwritten**
             if (paymentStatus !== "Pending Review") {
@@ -209,14 +241,24 @@ async function fetchBills(user) {
             const totalAmount = userRow[8] || "N/A";  
             tableBody.innerHTML += `<tr><td><strong>Total</strong></td><td><strong>${totalAmount}</strong></td></tr>`;
 
-            const unpaidAmount = userRow[9] || "N/A";  
-            unpaidTableBody.innerHTML = `<tr><td>Previously Unpaid Amount</td><td>${unpaidAmount}</td></tr>`;
+const unpaidAmount = userRow[5]; // Column F (index 5)
+const unpaidSection = document.getElementById("unpaid-section"); // Target the whole section
 
-            tableBody.innerHTML += `
-                <tr class="payment-status unpaid">
-                    <td colspan="2">${paymentStatus}</td>
-                </tr>
-            `;
+if (unpaidAmount && unpaidAmount.toString().trim() !== "") {  
+    unpaidTableBody.innerHTML = `<tr><td>Previously Unpaid Amount</td><td>${unpaidAmount}</td></tr>`;
+
+    // Show the entire unpaid section (heading + table)
+    unpaidSection.style.display = "block";  
+
+    console.log("Showing unpaid section since amount exists:", unpaidAmount);
+} else {
+    // Hide the entire unpaid section (heading + table)
+    unpaidSection.style.display = "none";  
+
+    console.log("Hiding unpaid section, no previous amount.");
+}
+
+
 
             // **Disable Upload Button if Status is "Paid" or "Pending Review"**
             if (uploadButton) {
