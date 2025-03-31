@@ -55,6 +55,8 @@
         <div class="button-container">
             <button id="upload-btn" onclick="uploadFile()">Upload Payment Receipts</button>
             <p style="font-size: 14px; color: gray;">Please upload your payment receipt for review. Once verified, your payment will be marked as complete. Thank you!</p>
+            <button onclick="viewReceipts()" id="viewreceipt-btn">View Meter Reading (Water & Electricity)</button>
+            <p style="font-size: 14px; color: gray;">Click to view Meter Reading for Water and Electricity</p>
             <button onclick="payThruBankTransfer()">Pay Thru Bank Transfer</button>
             <p style="font-size: 14px; color: gray;">Click to view options for bank transfer.</p>
             <button onclick="logout()" id="logout-btn">Logout</button>
@@ -97,6 +99,19 @@
         const paramVal2 = "1L6zmkeIoTS24l1BlpspzV2WXfid3GuVPo-ibhcG7CUQ"; 
         const usersSheet = "Users";
         const billsSheet = "Bill_Info";
+
+          const userDriveMappings = {
+    "b1_1st": "https://drive.google.com/drive/folders/1XkGXfg5ypzfJvxyxUPcBqnUZ2_t_rfQ_",
+    "b1_2nd": "https://drive.google.com/drive/folders/1P1FQAPthPtP55Ba_feiqS0IHIzpJnnWm",
+    "b1_3rd": "https://drive.google.com/drive/folders/13Jg-6pups0wlgL-y6PjFKKPFrSzHFt9z",
+    "b1_4th": "https://drive.google.com/drive/folders/1uLMXnmPsLbooJ-oqHKLwu1eCL2i1KNKW",
+    "b1_5th": "https://drive.google.com/drive/folders/1RFzMV0fwmCElPLovEkP5xKZgPqKdZsHH",
+    "b2_1st": "https://drive.google.com/drive/folders/1GReE5DuvDKJOuyZBHS1ulUG24X42aYtl",
+    "b2_2nd": "https://drive.google.com/drive/folders/1AXJZ_ZYoJpTrilu7gq6Te4AF2hTh2RJw",
+    "b2_3rd": "https://drive.google.com/drive/folders/11qTxAi7z_kYU2sqwyjnccrA-b83cHT4i",
+    "b2_4th": "https://drive.google.com/drive/folders/1q6WEn9Jj62WGiDcGQJ1dDi7_eWfttEfU",
+    "b2_5th": "https://drive.google.com/drive/folders/1gvPKA-0VmivALjP3dt-SvxSK-UyU5EQ_"
+  };
 
         const userDriveFolders = {
             "b1_1st": "https://drive.google.com/drive/folders/1cVDqZ6H9aQEn5D7tHc0gOc14ITrnfJ-T",
@@ -165,10 +180,10 @@ async function fetchBills(user) {
         unpaidTableBody.innerHTML = "";
 
         if (userRow) {
-            const paymentPeriod = userRow[6] || "N/A";
+            const paymentPeriod = userRow[7] || "N/A";
             document.getElementById("payment-period").textContent = paymentPeriod;
 
-            const paymentStatus = userRow[7] || "Not Paid";
+            const paymentStatus = userRow[8] || "Not Paid";
             console.log(`User Payment Status: ${paymentStatus}`);  // Debugging log
 
             // **Check if status is "Pending Review" first**
@@ -183,7 +198,7 @@ if (paymentStatus === "Paid") {
     tableBody.closest("table").style.display = "none"; // Hide main bills table
 
     // Get unpaid amount from column F (index 5)
-    const unpaidAmount = userRow[5]?.trim();
+    const unpaidAmount = userRow[6]?.trim();
     console.log("Unpaid Amount:", unpaidAmount); // Debugging
 
     if (unpaidAmount && unpaidAmount !== "0") {  // Ensure it’s a valid amount
@@ -238,10 +253,10 @@ if (paymentStatus === "Paid") {
                 tableBody.innerHTML += `<tr><td>${headers[i]}</td><td>${userRow[i] || "N/A"}</td></tr>`;
             }
 
-            const totalAmount = userRow[8] || "N/A";  
+            const totalAmount = userRow[9] || "N/A";  
             tableBody.innerHTML += `<tr><td><strong>Total</strong></td><td><strong>${totalAmount}</strong></td></tr>`;
 
-const unpaidAmount = userRow[5]; // Column F (index 5)
+const unpaidAmount = userRow[6]; // Column F (index 5)
 const unpaidSection = document.getElementById("unpaid-section"); // Target the whole section
 
 if (unpaidAmount && unpaidAmount.toString().trim() !== "") {  
@@ -327,6 +342,16 @@ function uploadFile() {
         })
         .catch(error => console.error("Error Updating Status:", error));
 }
+
+
+
+  function viewReceipts() {
+        const username = document.getElementById("user-name").textContent.trim();
+        const driveFolder = userDriveMappings[username];
+
+        window.location.href = driveFolder;
+
+  }
 
 
         
