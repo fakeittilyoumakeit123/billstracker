@@ -45,6 +45,10 @@
             </thead>
             <tbody id="bills-table"></tbody>
         </table>
+
+        <p style="font-size: 18px; color: black; margin-top: 10px;">
+    <strong>Instructions:</strong> Please click <em>"Submit Payment for Review"</em> first before uploading your payment receipt.
+</p>
 <div id="unpaid-section">
     <h3>Previously Unpaid Amount</h3>
     <table class="unpaid-table">
@@ -53,6 +57,8 @@
 </div>
 
         <div class="button-container">
+            <button onclick="updatePaymentStatus()">Submit Payment for Review</button>
+            <p style="font-size: 14px; color: gray;">Click to change payment for Review</p>
             <button id="upload-btn" onclick="uploadFile()">Upload Payment Receipts</button>
             <p style="font-size: 14px; color: gray;">Please upload your payment receipt for review. Once verified, your payment will be marked as complete. Thank you!</p>
             <button onclick="viewReceipts()" id="viewreceipt-btn">View Meter Reading (Water & Electricity)</button>
@@ -174,7 +180,7 @@ async function fetchBills(user) {
         const tableBody = document.getElementById("bills-table");
         const unpaidTableBody = document.getElementById("unpaid-table");
         const paymentMessage = document.getElementById("payment-message");
-        const uploadButton = document.querySelector("button[onclick='uploadFile()']");
+        const updateStatus = document.querySelector("button[onclick='updatePaymentStatus()']");
 
         tableBody.innerHTML = "";
         unpaidTableBody.innerHTML = "";
@@ -228,9 +234,9 @@ if (paymentStatus === "Paid") {
 
     paymentMessage.innerHTML = `<p>No unsettled bills for the month.</p>`;
 
-    if (uploadButton) {
-        uploadButton.disabled = true;
-        uploadButton.style.opacity = "0.5";
+    if (updateStatus) {
+        updateStatus.disabled = true;
+        updateStatus.style.opacity = "0.5";
     }
     return;
 }
@@ -276,15 +282,15 @@ if (unpaidAmount && unpaidAmount.toString().trim() !== "") {
 
 
             // **Disable Upload Button if Status is "Paid" or "Pending Review"**
-            if (uploadButton) {
+            if (updateStatus) {
                 if (paymentStatus === "Paid" || paymentStatus === "Pending Review") {
                     console.log("Disabling upload button...");
-                    uploadButton.disabled = true;
-                    uploadButton.style.opacity = "0.5"; 
+                    updateStatus.disabled = true;
+                    updateStatus.style.opacity = "0.5"; 
                 } else {
                     console.log("Enabling upload button...");
-                    uploadButton.disabled = false;
-                    uploadButton.style.opacity = "1"; 
+                    updateStatus.disabled = false;
+                    updateStatus.style.opacity = "1"; 
                 }
             } else {
                 console.error("Upload button NOT found!");
@@ -313,7 +319,7 @@ if (unpaidAmount && unpaidAmount.toString().trim() !== "") {
 
 
 
-
+// Redirects to the user's designated Google Drive folder
 function uploadFile() {
     const username = document.getElementById("user-name").textContent.trim();
     const driveFolder = userDriveFolders[username];
@@ -323,6 +329,12 @@ function uploadFile() {
         return;
     }
 
+    window.location.href = driveFolder;
+}
+
+// Updates the payment status to "For Review"
+function updatePaymentStatus() {
+    const username = document.getElementById("user-name").textContent.trim();
     const scriptURL = "https://script.google.com/macros/s/AKfycbwDJE8wMUtzdunWTA8UiaPK7gBllAJh8aimV3svvYFN_lebKLwx3Pd0lMFnXKRIK4Q9Og/exec";
     
     console.log("Fetching URL:", `${scriptURL}?action=markAsPendingReview&item=${encodeURIComponent(username)}`);
@@ -331,18 +343,14 @@ function uploadFile() {
         .then(response => response.json())
         .then(data => {
             console.log("Status Updated:", data);
-            if (data.success) {  // Check if success property exists
+            if (data.success) {
                 alert("Payment status updated to 'For Review'");
-
-                // **Move Navigation Here**
-                window.location.href = driveFolder;
             } else {
                 alert("Failed to update payment status. Check script logs.");
             }
         })
         .catch(error => console.error("Error Updating Status:", error));
 }
-
 
 
   function viewReceipts() {
